@@ -1,0 +1,10 @@
+# Environment variables (where your API keys will live later)
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Sivan Audit Logs & Outputs
+*.jsonl
+orchestrator_test_output.py
