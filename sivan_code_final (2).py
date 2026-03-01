@@ -8,7 +8,7 @@ Original file is located at
 """
 
 # @title
-!pip install requests
+
 
 import requests
 import json
@@ -531,11 +531,7 @@ print("  ✓ Graceful degradation")
 # Recreate the agent to use the new class
 
 # Define the API configuration using the previously defined keys
-config = APIConfig.from_keys(
-    planner_key="Bearer 28006e1c-f9f1-4dfd-9ea1-3e6abe5c5b8d/preetshu0806/deploy-model-project",
-    worker_key="Bearer f0c8b686-a728-42c9-9639-ac1bab23f152/preetshukku/deploy-model-project",
-    reviewer_key="Bearer f0c8b686-a728-42c9-9639-ac1bab23f152/preetshukku/pipeline-automation-project"
-)
+config = APIConfig.from_env()
 
 agent = EliteCodingAgentOrchestrator(
     config=config,
@@ -1001,11 +997,7 @@ print("  print(result['context_analytics'])")
 
 # Step 1: Configure with your API keys
 # IMPORTANT: Replace "Bearer YOUR_KEY_HERE" with your actual API keys.
-config = APIConfig.from_keys(
-    planner_key="Bearer 28006e1c-f9f1-4dfd-9ea1-3e6abe5c5b8d/preetshu0806/deploy-model-project",
-    worker_key="Bearer f0c8b686-a728-42c9-9639-ac1bab23f152/preetshukku/pipeline-automation-project",
-    reviewer_key="Bearer 28006e1c-f9f1-4dfd-9ea1-3e6abe5c5b8d/preetshu0806/deploy-model-project"
-)
+config = APIConfig.from_env()
 
 # Step 2: Create enhanced agent
 agent = EnhancedCodingAgentOrchestrator(
@@ -1018,77 +1010,3 @@ agent = EnhancedCodingAgentOrchestrator(
     )
 )
 
-# ============================================================================
-# ORCHESTRATION TEST CELL
-# Tests full Planner → Worker → Reviewer → Orchestrator pipeline
-# ============================================================================
-
-print("="*80)
-print("ORCHESTRATOR SYSTEM TEST")
-print("="*80)
-
-# SIMPLE TEST TASK (fast, reliable, easy to review)
-
-test_task = """
-Build a PRODUCTION-GRADE Async RAG (Retrieval-Augmented Generation) Document Ingestion Pipeline.
-This must be a complete, working system using Python.
-
-CORE OBJECTIVES:
-The system should:
-1. Accept a directory path containing PDF and TXT files.
-2. Asynchronously process multiple files concurrently to extract their text content.
-3. Clean the extracted text (remove excess whitespace, handle weird formatting).
-4. Implement a smart "Chunking" strategy (split the text into overlapping chunks of roughly 500 words).
-5. Generate text embeddings for each chunk using a local, open-source embedding model (e.g., using sentence-transformers).
-6. Store the chunks and their vector embeddings in a local Vector Database (e.g., ChromaDB or FAISS).
-7. Include robust error handling for corrupted files or unreadable PDFs.
-8. Provide a simple query function that takes a user's question, embeds it, and retrieves the top 3 most relevant text chunks from the database.
-
-Ensure the code is modular, uses type hints, and includes clear docstrings.
-"""
-
-
-print("\nTEST TASK:")
-print(test_task)
-print("\nStarting orchestration...\n")
-
-
-
-# Run orchestration
-result = agent.execute_task(test_task)
-
-print("\n" + "="*80)
-print("FINAL RESULT SUMMARY")
-print("="*80)
-
-print("STATUS:", result.get("status"))
-print("APPROVED:", result.get("approved"))
-print("ITERATIONS USED:", result.get("iterations_used"))
-print("REDESIGNS USED:", result.get("redesigns_used"))
-
-print("\n" + "="*80)
-print("GENERATED CODE:")
-print("="*80)
-
-print(result.get("final_code"))
-
-# ============================================================================
-# SAVE TEST OUTPUT
-# ============================================================================
-
-file_name = "orchestrator_test_output.py"
-
-with open(file_name, "w", encoding="utf-8") as f:
-    f.write(result.get("final_code", ""))
-
-print(f"\n✅ Test output saved to: {file_name}")
-
-# If using Colab, download automatically
-try:
-    from google.colab import files
-    files.download(file_name)
-except:
-    pass
-
-print("\nORCHESTRATOR TEST COMPLETE")
-print("="*80)
