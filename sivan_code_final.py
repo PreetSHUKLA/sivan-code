@@ -19,6 +19,8 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 import hashlib
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 # =============================================================================
 # CONFIGURATION & ENUMS
@@ -1010,3 +1012,53 @@ agent = EnhancedCodingAgentOrchestrator(
     )
 )
 
+# ============================================================================
+# FASTAPI BACKEND SERVER (THE BRAIN)
+# ============================================================================
+
+app = FastAPI(title="Sivan AI Backend")
+
+# This is the master password users will need to type into their CLI!
+SECRET_AUTH_CODE = os.getenv("SIVAN_AUTH_CODE", "SIVAN-BETA-777")
+
+# Define what the CLI will send us
+class TaskRequest(BaseModel):
+    auth_code: str
+    prompt: str
+
+@app.post("/generate")
+async def generate_code(request: TaskRequest):
+    print(f"\n📩 Received new request from CLI!")
+    
+    # 1. The Bouncer: Check if they have the right password
+    if request.auth_code != SECRET_AUTH_CODE:
+        print("❌ Authentication failed. Wrong code.")
+        raise HTTPException(status_code=401, detail="Invalid Authentication Code")
+    
+    print("✅ Authentication successful. Waking up Sivan...")
+    
+    try:
+        # 2. Load your secure API keys from your .env vault
+        config = APIConfig.from_env()
+        
+        # 3. Boot up the Orchestrator
+        agent = EnhancedCodingAgentOrchestrator(
+            config=config,
+            max_iterations=3,
+            max_redesigns=2
+        )
+        
+        # 4. Run their prompt!
+        result = agent.execute_task(request.prompt)
+        
+        # 5. Send ONLY the finished code back to their CLI
+        return {
+            "status": "success", 
+            "code": result.get("final_code", "# Error: Sivan could not generate code.")
+        }
+        
+    except Exception as e:
+        print(f"❌ Server Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+        
