@@ -49,7 +49,7 @@ class APIConfig:
     REVIEWER_API_KEY: str = None
 
     PLANNER_MODEL: str = "lightning-ai/kimi-k2.5"
-    WORKER_MODEL: str = "anthropic/claude-sonnet-4-5-20250929"
+    WORKER_MODEL: str = "lightning-ai/DeepSeek-V3.1"
     REVIEWER_MODEL: str = "openai/gpt-4.1"
 
     COST_PER_1K_TOKENS: Dict[str, float] = None
