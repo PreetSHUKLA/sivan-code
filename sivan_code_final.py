@@ -1054,8 +1054,8 @@ async def generate_code(request: TaskRequest):
         # 3. Boot up the Orchestrator
         agent = EnhancedCodingAgentOrchestrator(
             config=config,
-            max_iterations=3,
-            max_redesigns=2
+            max_iterations=2,
+            max_redesigns=1
         )
         
         # 4. Run their prompt!
