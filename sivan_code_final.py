@@ -439,18 +439,19 @@ RULES:
 # =============================================================================
 
 class EliteCodingAgentOrchestrator:
-    def __init__(self, config: APIConfig, max_iterations: int = 3, max_redesigns: int = 2, timeout_per_agent: int = 60, audit_log_file: str = "agent_audit.jsonl"):
-        self.config = config
-        self.max_iterations = max_iterations
-        self.max_redesigns = max_redesigns
-        self.timeout = timeout_per_agent
+    def __init__(self, config: APIConfig, max_iterations: int = 3, max_redesigns: int = 2, context_limits: Optional[ContextLimits] = None, stream_callback=None):
+     self.config = config
+     self.max_iterations = max_iterations
+     self.max_redesigns = max_redesigns
+     self.context_limits = context_limits or ContextLimits()
+     self.stream_callback = stream_callback  # NEW LINE
 
-        self.audit_logger = AuditLogger(audit_log_file)
-        self.cost_metrics = CostMetrics()
+     self.audit_logger = AuditLogger(audit_log_file)
+     self.cost_metrics = CostMetrics()
 
-        self.planner = PlannerAgent(config, self.audit_logger)
-        self.worker = WorkerAgent(config, self.audit_logger)
-        self.reviewer = ReviewerAgent(config, self.audit_logger)
+     self.planner = PlannerAgent(config, self.audit_logger)
+     self.worker = WorkerAgent(config, self.audit_logger)
+     self.reviewer = ReviewerAgent(config, self.audit_logger)
 
     def execute_task(self, task_description: str, codebase_context: str = "") -> Dict:
         print("ELITE AI CODING AGENT")
@@ -878,6 +879,13 @@ class EnhancedCodingAgentOrchestrator:
             # Iteration loop
             for iteration in range(1, self.max_iterations + 1):
                 print(f"\n🔄 ITERATION {iteration}/{self.max_iterations}")
+                if self.stream_callback:
+                    self.stream_callback(json.dumps({
+        "type": "status",
+        "stage": "Writing Code",
+        "iteration": iteration,
+        "message": f"💻 Iteration {iteration}/{self.max_iterations}..."
+    }))
                 print("-" * 80)
 
                 # Extract priority fixes
@@ -927,6 +935,12 @@ class EnhancedCodingAgentOrchestrator:
                 if review_result.get('approved'):
                     print("\n" + "=" * 80)
                     print("✅ CODE APPROVED - PRODUCTION READY!")
+                    if self.stream_callback:
+                        self.stream_callback(json.dumps({
+        "type": "status",
+        "stage": "Complete",
+        "message": "✅ Code approved!"
+    }))
                     print("=" * 80)
 
                     return {
@@ -1036,52 +1050,78 @@ class TaskRequest(BaseModel):
     auth_code: str
     prompt: str
 
+from fastapi.responses import StreamingResponse
+import asyncio
+
 @app.post("/generate")
 async def generate_code(request: TaskRequest):
     print(f"\n📩 Received new request from CLI!")
     
-    # 1. The Bouncer: Check if they have the right password
+    # 1. Check password
     if request.auth_code != SECRET_AUTH_CODE:
         print("❌ Authentication failed. Wrong code.")
         raise HTTPException(status_code=401, detail="Invalid Authentication Code")
     
     print("✅ Authentication successful. Waking up Sivan...")
     
-    try:
-        # 2. Load your secure API keys from your .env vault
-        config = APIConfig.from_env()
-        
-        # 3. Boot up the Orchestrator
-        agent = EnhancedCodingAgentOrchestrator(
-            config=config,
-            max_iterations=2,
-            max_redesigns=1
-        )
-        
-        # 4. Run their prompt!
-        result = agent.execute_task(request.prompt)
-
-        # --- NEW: Save the logs to server memory ---
-        review_data = result.get("review") or {}
-        user_generation_logs[request.auth_code] = {
-            "plan": result.get("plan", "No plan recorded."),
-            "review": review_data.get("feedback", "No review recorded.")
-        }
-        # -----------------------------------------
-        
-        # 5. Send ONLY the finished code back to their CLI
-        return {
-            "status": "success", 
-            "code": result.get("final_code", "# Error: Sivan could not generate code.")
-        }
-        
-    except Exception as e:
-        print(f"❌ Server Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+    # 2. Create a streaming generator function
+    async def generate_with_updates():
+        try:
+            # Send initial message
+            yield json.dumps({"type": "status", "stage": "Planning", "message": "📋 Analyzing your task..."}) + "\n"
+            await asyncio.sleep(0.1)  # Small delay so CLI can display it
+            
+            # Load config
+            config = APIConfig.from_env()
+            
+            # Create agent with streaming callback
+            agent = EnhancedCodingAgentOrchestrator(
+                config=config,
+                max_iterations=2,
+                max_redesigns=1,
+                stream_callback=lambda msg: msg  # We'll implement this next
+            )
+            
+            # Hook into the orchestrator to send updates
+            original_execute = agent.execute_task
+            
+            async def execute_with_streaming(task):
+                # Planning stage
+                yield json.dumps({"type": "status", "stage": "Planning", "message": "🏗️ Creating architecture plan..."}) + "\n"
+                
+                # Run the actual task (this calls planner, worker, reviewer)
+                result = original_execute(task)
+                
+                return result
+            
+            # Execute
+            yield json.dumps({"type": "status", "stage": "Executing", "message": "💻 Starting code generation..."}) + "\n"
+            result = agent.execute_task(request.prompt)
+            
+            # Save logs
+            review_data = result.get("review") or {}
+            user_generation_logs[request.auth_code] = {
+                "plan": result.get("plan", "No plan recorded."),
+                "review": review_data.get("feedback", "No review recorded.")
+            }
+            
+            # Send final code
+            yield json.dumps({
+                "type": "complete",
+                "status": "success",
+                "code": result.get("final_code", "# Error: Could not generate code.")
+            }) + "\n"
+            
+        except Exception as e:
+            print(f"❌ Server Error: {str(e)}")
+            yield json.dumps({"type": "error", "message": str(e)}) + "\n"
+    
+    return StreamingResponse(generate_with_updates(), media_type="application/x-ndjson")
 
 # ============================================================================
 # LOGS ENDPOINT
 # ============================================================================
+
 @app.get("/last-plan")
 async def get_last_plan(auth_code: str):
     """Fetches the most recent generation logs for the user."""
