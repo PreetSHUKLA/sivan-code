@@ -1053,6 +1053,7 @@ class TaskRequest(BaseModel):
 from fastapi.responses import StreamingResponse
 import asyncio
 
+
 @app.post("/generate")
 async def generate_code(request: TaskRequest):
     print(f"\n📩 Received new request from CLI!")
@@ -1069,33 +1070,27 @@ async def generate_code(request: TaskRequest):
         try:
             # Send initial message
             yield json.dumps({"type": "status", "stage": "Planning", "message": "📋 Analyzing your task..."}) + "\n"
-            await asyncio.sleep(0.1)  # Small delay so CLI can display it
+            await asyncio.sleep(0.1)
             
             # Load config
             config = APIConfig.from_env()
             
-            # Create agent with streaming callback
+            # Create agent
             agent = EnhancedCodingAgentOrchestrator(
                 config=config,
                 max_iterations=2,
-                max_redesigns=1,
-                stream_callback=lambda msg: msg  # We'll implement this next
+                max_redesigns=1
             )
             
-            # Hook into the orchestrator to send updates
-            original_execute = agent.execute_task
+            # Send planning update
+            yield json.dumps({"type": "status", "stage": "Planning", "message": "🏗️ Creating architecture plan..."}) + "\n"
+            await asyncio.sleep(0.1)
             
-            async def execute_with_streaming(task):
-                # Planning stage
-                yield json.dumps({"type": "status", "stage": "Planning", "message": "🏗️ Creating architecture plan..."}) + "\n"
-                
-                # Run the actual task (this calls planner, worker, reviewer)
-                result = original_execute(task)
-                
-                return result
-            
-            # Execute
+            # Send execution update
             yield json.dumps({"type": "status", "stage": "Executing", "message": "💻 Starting code generation..."}) + "\n"
+            await asyncio.sleep(0.1)
+            
+            # Execute the task (this is synchronous, so we need to handle it properly)
             result = agent.execute_task(request.prompt)
             
             # Save logs
@@ -1105,12 +1100,14 @@ async def generate_code(request: TaskRequest):
                 "review": review_data.get("feedback", "No review recorded.")
             }
             
-            # Send final code
+            # Send final code - THIS IS THE CORRECT WAY
             yield json.dumps({
                 "type": "complete",
                 "status": "success",
                 "code": result.get("final_code", "# Error: Could not generate code.")
             }) + "\n"
+            
+            # NO RETURN HERE - just end the generator
             
         except Exception as e:
             print(f"❌ Server Error: {str(e)}")
