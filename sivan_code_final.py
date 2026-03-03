@@ -1025,6 +1025,9 @@ agent = EnhancedCodingAgentOrchestrator(
 
 app = FastAPI(title="Sivan AI Backend")
 
+# --- NEW: Temporary memory storage for logs ---
+user_generation_logs = {}
+
 # This is the master password users will need to type into their CLI!
 SECRET_AUTH_CODE = os.getenv("SIVAN_AUTH_CODE", "SIVAN-BETA-777")
 
@@ -1057,6 +1060,14 @@ async def generate_code(request: TaskRequest):
         
         # 4. Run their prompt!
         result = agent.execute_task(request.prompt)
+
+        # --- NEW: Save the logs to server memory ---
+        review_data = result.get("review") or {}
+        user_generation_logs[request.auth_code] = {
+            "plan": result.get("plan", "No plan recorded."),
+            "review": review_data.get("feedback", "No review recorded.")
+        }
+        # -----------------------------------------
         
         # 5. Send ONLY the finished code back to their CLI
         return {
@@ -1067,5 +1078,24 @@ async def generate_code(request: TaskRequest):
     except Exception as e:
         print(f"❌ Server Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# LOGS ENDPOINT
+# ============================================================================
+@app.get("/last-plan")
+async def get_last_plan(auth_code: str):
+    """Fetches the most recent generation logs for the user."""
+    # 1. Verify the password
+    if auth_code != SECRET_AUTH_CODE:
+        raise HTTPException(status_code=401, detail="Invalid Authentication Code")
+        
+    # 2. Return the logs if they exist
+    if auth_code in user_generation_logs:
+        return user_generation_logs[auth_code]
+    else:
+        return {
+            "plan": "No recent plan found. Run a generation first!",
+            "review": "No recent review found."
+        }
 
         
