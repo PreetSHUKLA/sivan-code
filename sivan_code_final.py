@@ -439,7 +439,7 @@ RULES:
 # =============================================================================
 
 class EliteCodingAgentOrchestrator:
-    def __init__(self, config: APIConfig, max_iterations: int = 3, max_redesigns: int = 2, context_limits: Optional[ContextLimits] = None, stream_callback=None):
+    def __init__(self, config: APIConfig, max_iterations: int = 3, max_redesigns: int = 2, context_limits: Optional[ContextLimits] = None, stream_callback=None, audit_log_file: str = "agent_audit.jsonl"):
      self.config = config
      self.max_iterations = max_iterations
      self.max_redesigns = max_redesigns
