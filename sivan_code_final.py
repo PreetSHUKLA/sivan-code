@@ -798,11 +798,13 @@ class EnhancedCodingAgentOrchestrator:
         max_iterations=3,
         max_redesigns=2,
         audit_log_file="agent_audit.jsonl",
-        context_limits=None
+        context_limits=None,
+        stream_callback=None
     ):
         self.config = config
         self.max_iterations = max_iterations
         self.max_redesigns = max_redesigns
+        self.stream_callback = stream_callback
 
         # Initialize audit logger
         self.audit_logger = AuditLogger(audit_log_file)
