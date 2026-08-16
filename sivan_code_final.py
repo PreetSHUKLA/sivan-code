@@ -273,54 +273,70 @@ class PlannerAgent:
     def create_plan(self, task_description: str, codebase_context: str = "", redesign_feedback: Optional[str] = None) -> Dict:
         """Creates ONLY architectural plan - NO CODE GENERATION"""
         if redesign_feedback:
-            prompt = f"""You are a SENIOR SOFTWARE ARCHITECT. Your role is PLANNING ONLY - NOT coding.
-
-The previous implementation approach FAILED with these issues:
-{redesign_feedback}
+            prompt = f"""You are a SENIOR SOFTWARE ARCHITECT. Your role is PLANNING & ARCHITECTURAL REDESIGN ONLY - NOT coding.
 
 ORIGINAL TASK: {task_description}
 
-YOUR JOB: Design a COMPLETELY DIFFERENT architectural approach.
+PREVIOUS ATTEMPT FAILURE & REVIEWER FEEDBACK:
+{redesign_feedback}
 
-⚠️ IMPORTANT: You are NOT writing code. You are making architectural decisions.
+YOUR JOB: Analyze the failure and design a corrected, robust architectural plan for the Worker agent to execute.
 
-YOUR JOB: Design a COMPLETELY DIFFERENT architectural approach that follows the principle of PROPORTIONAL ENGINEERING.
-- For trivial tasks: Prioritize clean, idiomatic, and robust single-file execution.
-- For production tasks: Prioritize modularity, observability, and scalability.
-RESPOND WITH THIS EXACT STRUCTURE (NO CODE):
+GUIDING PRINCIPLES:
+1. ROOT CAUSE DIRECTED:
+   - Address every specific failure point identified by the Reviewer.
+   - Determine whether a fundamental architectural pivot is required or a targeted architectural correction/refactor of the failed components.
+2. PROPORTIONAL ENGINEERING:
+   - For trivial tasks: Prioritize clean, idiomatic, and robust single-file execution.
+   - For production tasks: Prioritize modularity, observability, and scalability.
+3. SPECIFICATION OVER IMPLEMENTATION:
+   - Define exact signatures, data contracts, and target file paths. Do NOT write full implementation logic.
+
+RESPOND WITH THIS EXACT STRUCTURE:
 
 ## Root Cause Analysis
-[THINKING SPACE: Why did the previous approach fail? What was the fundamental mistake? Analyze the trade-offs before proposing a new solution.]
+[Analyze why the previous implementation failed based on the Reviewer feedback. Identify the exact breakdown points (e.g., logic flaw, incorrect data shape, unhandled edge cases, dependency issue, or bad architectural choice) and explain the strategy to resolve them.]
 
 ## New Architectural Strategy
-[High-level design paradigm - describe the approach, don't implement it]
+[High-level design paradigm and corrected system flow. Detail the architectural changes being made to prevent the previous failures.]
 
 ## Technology Stack
-[Specific libraries/frameworks to use]
-- Library 1: [name] - Purpose: [why use it]
-- Library 2: [name] - Purpose: [why use it]
+[Specific libraries/frameworks to use, add, or replace. List exact package names and justify why they resolve the issues.]
+- Library 1: [name] - Purpose: [why use it and how it addresses the failure]
+- Library 2: [name] - Purpose: [why use it and how it addresses the failure]
 
 ## Component Breakdown
-[List of classes/functions needed - just names and responsibilities, NO implementation]
-1. Component Name: Responsibility
-2. Component Name: Responsibility
+[Classes, interfaces, and function signatures to create or update. Provide exact contracts and target files, NO implementation bodies.]
+1. Component Name / Function Signature:
+   - Target File: [path/to/file.ext]
+   - Responsibility & Fix: [what it does and what bug/failure it corrects]
+   - Inputs / Types: [parameter names and types]
+   - Outputs / Return Type: [return type and schema]
+
+2. Component Name / Function Signature:
+   - Target File: [path/to/file.ext]
+   - Responsibility & Fix: [what it does and what bug/failure it corrects]
+   - Inputs / Types: [parameter names and types]
+   - Outputs / Return Type: [return type and schema]
 
 ## Implementation Roadmap
-[Step-by-step tasks for the Worker agent to execute]
-Step 1: [What to build]
-Step 2: [What to build]
-Step 3: [What to build]
+[Step-by-step, actionable tasks for the Worker agent. Specify whether each step creates, modifies, or deletes a file.]
+Step 1: [Target File: path/to/file.ext] - [Specific instruction for Worker]
+Step 2: [Target File: path/to/file.ext] - [Specific instruction for Worker]
+Step 3: [Target File: path/to/file.ext] - [Specific instruction for Worker]
 
 ## Security Requirements
-[What security measures must be implemented]
+[Security, input validation, or sanitization measures required for the new design]
+- Requirement 1: [Specific measure and implementation rule]
 
 ## Edge Cases to Handle
-[List specific edge cases]
+[Specific edge cases and failure modes, explicitly including those that triggered the previous failure]
+- Edge Case 1: [Scenario that previously failed or could fail] → [Exact resolution/handling strategy]
 
 ## Success Criteria
-[How to verify the implementation works]
+[Measurable verification steps, test commands, and assertions to confirm the fix passes reviewer standards]
 
-⚠️ DO NOT WRITE ANY CODE. Your output is architectural guidance for the Worker agent."""
+⚠️ DO NOT WRITE ANY CODE. Your output is architectural blueprint and task specification for the Worker agent."""
 
         else:
             prompt = f"""You are an EXPERT SOFTWARE ARCHITECT. Your role is PLANNING & ARCHITECTURE ONLY - NOT coding.
@@ -331,61 +347,65 @@ EXISTING CODEBASE CONTEXT: {codebase_context if codebase_context else "New proje
 
 YOUR JOB: Create a comprehensive architectural plan that the Worker agent will implement.
 
-⚠️ CRITICAL: You are NOT writing code. You are designing the architecture and breaking down the work.
-YOUR JOB: Design a COMPLETELY DIFFERENT architectural approach that follows the principle of PROPORTIONAL ENGINEERING.
-- For trivial tasks: Prioritize clean, idiomatic, and robust single-file execution.
-- For production tasks: Prioritize modularity, observability, and scalability.
+GUIDING PRINCIPLES:
+1. PROPORTIONAL ENGINEERING:
+   - For trivial tasks: Prioritize clean, idiomatic, single-file or minimal execution.
+   - For production tasks: Prioritize modularity, observability, and scalability.
+2. CODEBASE CONTINUITY:
+   - Reuse existing patterns, utilities, and libraries from the codebase context. Avoid introducing redundant dependencies.
+3. SPECIFICATION OVER IMPLEMENTATION:
+   - Define exact interfaces, schemas, and target file paths. Do NOT write full implementation logic.
 
-RESPOND WITH THIS EXACT STRUCTURE (NO CODE BLOCKS):
+RESPOND WITH THIS EXACT STRUCTURE:
 
 ## Technical Analysis
-[THINKING SPACE: Analyze the core problem. What are the major technical hurdles? Discuss trade-offs between different approaches (e.g., sync vs async, database choices). Make your architectural decisions here before writing the blueprint below.]
+[Analyze the core problem, complexity level (Trivial vs Production), and trade-offs between different approaches (e.g., sync vs async, storage options, libraries). Justify your architectural decisions.]
 
 ## Architecture Overview
-[High-level design approach - describe the chosen solution architecture based on your analysis]
+[High-level design approach and system flow. Include the target file structure/tree to be created or modified.]
 
 ## Technology Stack & Libraries
-[Specific libraries to use - be precise! Base this on your analysis.]
-- Library 1: [exact name] - Purpose: [what it does]
-- Library 2: [exact name] - Purpose: [what it does]
-Example: "email-validator" for email validation (safer than regex)
+[Specific libraries to use - be precise. List exact package names and justify why they are needed.]
+- Library 1: [exact package name] - Purpose: [what it does]
+- Library 2: [exact package name] - Purpose: [what it does]
 
 ## Component Design
-[Classes/functions needed - just structure, NO implementation]
+[Classes, interfaces, and function signatures. Define data contracts and schemas, but NO function bodies or implementation logic.]
 1. ClassName/FunctionName
+   - Target File: [path/to/file.ext]
    - Purpose: [what it does]
-   - Inputs: [what parameters]
-   - Outputs: [what it returns]
-   - Dependencies: [what it needs]
+   - Inputs/Parameters: [exact names and types]
+   - Outputs/Return Type: [exact types/schema]
+   - Dependencies: [imported modules or internal helpers]
 
 2. ClassName/FunctionName
+   - Target File: [path/to/file.ext]
    - Purpose: [what it does]
-   - Inputs: [what parameters]
-   - Outputs: [what it returns]
+   - Inputs/Parameters: [exact names and types]
+   - Outputs/Return Type: [exact types/schema]
+   - Dependencies: [imported modules or internal helpers]
 
 ## Implementation Tasks (for Worker Agent)
-[Detailed step-by-step breakdown - actionable tasks]
-Task 1: [Specific instruction for Worker]
-Task 2: [Specific instruction for Worker]
-Task 3: [Specific instruction for Worker]
+[Actionable, sequential task breakdown. Each task must specify the exact target file.]
+Task 1: [Target File: path/to/file.ext] - [Specific instruction for Worker]
+Task 2: [Target File: path/to/file.ext] - [Specific instruction for Worker]
+Task 3: [Target File: path/to/file.ext] - [Specific instruction for Worker]
 
 ## Security Considerations
 [Security requirements the Worker must implement]
-- Requirement 1: [what must be secured and how]
+- Requirement 1: [Authentication, input sanitization, data validation, or secret handling]
 
 ## Edge Cases & Error Handling
 [Specific scenarios to handle]
-- Edge case 1: [scenario] → [how to handle]
+- Edge Case 1: [Trigger scenario] → [Expected handling / recovery strategy]
 
 ## Testing Strategy
-[What should be tested]
+[Specific unit and integration tests to write, including target test file paths and key test cases]
 
 ## Success Criteria
-[How to verify correctness]
+[Measurable verification steps and acceptance criteria to confirm correctness]
 
-⚠️ REMEMBER: You are the architect, not the builder. Provide the blueprint, not the construction.
-⚠️ DO NOT INCLUDE ANY CODE SNIPPETS OR IMPLEMENTATIONS.
-⚠️ Focus on WHAT to build and WHY, not HOW to build it."""
+⚠️ REMEMBER: You are the architect, not the builder. Provide the blueprint, signatures, and file targets, not the implementation logic."""
 
         # Unpack the 4 items
         plan, cost, tokens, latency = call_ai_api_with_metrics(
@@ -410,32 +430,50 @@ class WorkerAgent:
         self.audit_logger = audit_logger
 
     def write_code(self, plan_data: Dict, feedback: Optional[str] = None, iteration: int = 1, priority_fixes: Optional[str] = None) -> Tuple[str, float]:
-        if feedback and priority_fixes:
-            prompt = f"""CRITICAL fixes required.
+        # 1. When there is a comprehensive Architectural Plan + Priority Fixes + Feedback
+if priority_fixes:
+  prompt = f"""CRITICAL BUG FIXES & CODE REVISION REQUIRED.
 
-TASK: {plan_data['task']}
-PLAN: {plan_data['plan']}
-CRITICAL: {priority_fixes}
-FEEDBACK: {feedback}
+### TASK:
+{plan_data['task']}
 
-INSTRUCTIONS:
-- Implement the requested fixes.
-- Use type hints and add brief, highly technical docstrings.
-- Output ONLY valid code. No conversational filler."""
-        elif feedback:
-            prompt = f"""Revise code.
+### ARCHITECTURAL PLAN:
+{plan_data['plan']}
 
-TASK: {plan_data['task']}
-FEEDBACK: {feedback}
+### CURRENT FAILING CODE:
+{current_code}
 
-Output ONLY corrected code."""
-        else:
-            prompt = f"""Implement.
+### CRITICAL FIXES IDENTIFIED:
+{priority_fixes}
 
-TASK: {plan_data['task']}
-PLAN: {plan_data['plan']}
+### REVIEWER FEEDBACK:
+{feedback}
 
-Use libraries. Production code. Use type hints and add brief, highly technical docstrings"""
+### INSTRUCTIONS:
+1. Fix all identified errors and address every piece of reviewer feedback.
+2. Preserve all existing working functionality—do not drop features or introduce regressions.
+3. Maintain full type annotations and clean docstrings.
+4. If modifying multiple files, clearly label each file using `### File: path/to/file.ext` before each code block.
+5. Output ONLY the complete, executable code blocks. No conversational filler or explanations."""
+
+# 2. When there is direct Feedback / minor revision
+elif feedback:
+  prompt = f"""REVISE AND CORRECT CODE.
+
+### TASK:
+{plan_data['task']}
+
+### CURRENT CODE:
+{current_code}
+
+### REVIEWER FEEDBACK & FAILURE REASON:
+{feedback}
+
+### INSTRUCTIONS:
+1. Apply the requested corrections directly to the current code.
+2. Ensure all edge cases and failure points mentioned in the feedback are handled.
+3. Preserve existing working logic and maintain type hints.
+4. Output ONLY the complete, corrected code blocks. No conversational filler or explanations."""
 
         # Unpack the 4 items
         code, cost, tokens, latency = call_ai_api_with_metrics(
@@ -458,36 +496,66 @@ class ReviewerAgent:
         self.audit_logger = audit_logger
 
     def review_code(self, code: str, original_task: str, iteration: int = 1) -> Dict:
-        prompt = f"""
-        ROLE: Context-Aware Principal Software Engineer & Code Reviewer.
-RESPOND WITH JSON ONLY.
+        prompt = f"""ROLE: Context-Aware Principal Software Engineer & Code Reviewer.
 
-MISSION: You are evaluating code generated by an AI Worker. Your review strictness MUST scale dynamically based on the complexity of the original user task. 
-- Level 1 (Simple Tasks): For basic scripts, algorithms, or "Hello World" concepts, approve the code if it runs correctly and safely. Do NOT demand enterprise architecture.
-- Level 2 (Production/Complex Tasks): For APIs, databases, or high-throughput systems, act as a strict SRE. Hunt for memory leaks, resource exhaustion, and unhandled edge cases.
+MISSION:
+Evaluate the code generated by the Worker against the Task and the Architectural Plan.
+Your review strictness must scale dynamically:
+- Level 1 (Simple Tasks/Scripts): If the code executes correctly, handles obvious errors, and fulfills the task, APPROVE it. Do NOT demand enterprise abstractions or boilerplate.
+- Level 2 (Production/Complex Systems): Act as a strict SRE. Audit for race conditions, resource leaks, security flaws, missing error handling, and plan non-compliance.
 
-TASK: {original_task}
-CODE: {code}
+CONTEXT:
+### ORIGINAL TASK:
+{original_task}
 
-JSON FORMAT:
+### ARCHITECTURAL PLAN:
+{architectural_plan if architectural_plan else "N/A - Direct implementation"}
+
+### WORKER CODE:
+{code}
+
+### RUNTIME / TEST EXECUTION RESULTS (IF AVAILABLE):
+{test_results if test_results else "No execution logs provided."}
+
+---
+
+STATUS DECISION RULES:
+- "APPROVED": Code is functional, safe, and meets all requirements. (Minor style nits do not block approval).
+- "NEEDS_REVISION": Code has bugs, unhandled edge cases, or logic errors that can be fixed within the current architecture.
+- "NEEDS_REDESIGN": The fundamental approach/library is broken, incompatible, or cannot scale to the task requirements.
+
+SEVERITY RULES:
+- "NONE": Code is approved (or only has trivial cosmetic observations).
+- "MINOR": Non-breaking suggestions (naming, comments, minor refactor).
+- "MEDIUM": Logic bugs, unhandled edge cases, missing error boundaries.
+- "CRITICAL": Fatal crashes, security vulnerabilities, memory/resource leaks, completely broken functionality.
+
+---
+
+RESPONSE INSTRUCTIONS:
+- Respond with a SINGLE valid JSON object.
+- Ensure all inner strings are properly escaped to prevent JSON decode errors.
+- Do NOT output conversational filler or text outside the JSON object.
+
+JSON OUTPUT STRUCTURE:
 {{
-  "status": "APPROVED/NEEDS_REVISION/NEEDS_REDESIGN",
-  "severity": "CRITICAL/MEDIUM/MINOR/NONE",
-  "critical_issues": ["Focus on show-stoppers. Leave empty if simple code works."],
-  "medium_issues": ["Focus on architecture, error handling, and logical flaws."],
-  "minor_issues": ["Focus on readability, missing type hints, or basic logging."],
-  "architectural_concerns": ["Systemic scaling bottlenecks (Only flag for complex systems)."],
-  "specific_fixes": ["Provide EXACT code snippets or logic the Worker must use to fix the issues. Be a mentor, not just a critic."],
-  "redesign_recommendation": "Provide specific architectural patterns if NEEDS_REDESIGN, else null",
-  "positive_aspects": ["Acknowledge what the Worker did right"]
+  "status": "APPROVED",
+  "severity": "NONE",
+  "summary": "Concise 1-2 sentence assessment of the implementation.",
+  "plan_compliance": true,
+  "critical_issues": [],
+  "medium_issues": [],
+  "minor_issues": [],
+  "architectural_concerns": [],
+  "specific_fixes": [
+    "Precise, actionable instruction or pseudocode on how to fix each identified issue."
+  ],
+  "redesign_recommendation": null,
+  "positive_aspects": [
+    "Key strengths of the implementation."
+  ]
 }}
-
-RULES:
-1. Output ONLY valid JSON. No markdown wrappers outside the JSON.
-2. DYNAMIC SCALING: If the task is simple (e.g., standard math, basic file I/O), set severity to NONE and status to APPROVED as long as the logic is sound. Do not over-engineer simple scripts.
-3. MENTORSHIP: If you reject code, you MUST provide explicit, actionable solutions in `specific_fixes`. Do not just complain about the architecture; tell the Worker exactly how to pass your audit on the next iteration.
-4. NEEDS_REDESIGN must only be triggered if the fundamental approach is entirely wrong or will critically fail under its intended load.
-        """
+"""
 
         # Unpack the 4 items
         review_text, cost, tokens, latency = call_ai_api_with_metrics(
