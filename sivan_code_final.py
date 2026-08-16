@@ -48,9 +48,9 @@ class APIConfig:
     WORKER_API_KEY: str = None
     REVIEWER_API_KEY: str = None
 
-    PLANNER_MODEL: str = "lightning-ai/kimi-k2.5"
-    WORKER_MODEL: str = "lightning-ai/DeepSeek-V3.1"
-    REVIEWER_MODEL: str = "openai/gpt-4.1"
+    PLANNER_MODEL: str = "lightning-ai/gpt-oss-120b"
+    WORKER_MODEL: str = "lightning-ai/nvidia-nemotron-3-nano-omni-30b-a3b"
+    REVIEWER_MODEL: str = "openai/gpt-5.6-luna"
 
     COST_PER_1K_TOKENS: Dict[str, float] = None
 
