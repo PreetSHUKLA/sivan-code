@@ -1038,22 +1038,25 @@ agent = EnhancedCodingAgentOrchestrator(
 # FASTAPI BACKEND SERVER (THE BRAIN)
 # ============================================================================
 
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+import asyncio
+import os
+import json
+
 app = FastAPI(title="Sivan AI Backend")
 
-# --- NEW: Temporary memory storage for logs ---
+# Temporary memory storage for logs
 user_generation_logs = {}
 
-# This is the master password users will need to type into their CLI!
+# The master password users will need to type into their CLI!
 SECRET_AUTH_CODE = os.getenv("SIVAN_AUTH_CODE", "SIVAN-BETA-777")
 
 # Define what the CLI will send us
 class TaskRequest(BaseModel):
     auth_code: str
     prompt: str
-
-from fastapi.responses import StreamingResponse
-import asyncio
-
 
 @app.post("/generate")
 async def generate_code(request: TaskRequest):
@@ -1083,16 +1086,12 @@ async def generate_code(request: TaskRequest):
                 max_redesigns=1
             )
             
-            # Send planning update
-            yield json.dumps({"type": "status", "stage": "Planning", "message": "🏗️ Creating architecture plan..."}) + "\n"
-            await asyncio.sleep(0.1)
-            
             # Send execution update
-            yield json.dumps({"type": "status", "stage": "Executing", "message": "💻 Starting code generation..."}) + "\n"
+            yield json.dumps({"type": "status", "stage": "Executing", "message": "💻 Starting code generation (this may take a minute)..."}) + "\n"
             await asyncio.sleep(0.1)
             
-            # Execute the task (this is synchronous, so we need to handle it properly)
-            result = agent.execute_task(request.prompt)
+            # FIX 1: Run the heavy, synchronous LLM tasks in a separate thread to prevent blocking FastAPI
+            result = await asyncio.to_thread(agent.execute_task, request.prompt)
             
             # Save logs
             review_data = result.get("review") or {}
@@ -1101,14 +1100,14 @@ async def generate_code(request: TaskRequest):
                 "review": review_data.get("feedback", "No review recorded.")
             }
             
-            # Send final code - THIS IS THE CORRECT WAY
+            # FIX 2: Expose the cost and analytics metrics in the final payload back to the CLI
             yield json.dumps({
                 "type": "complete",
                 "status": "success",
-                "code": result.get("final_code", "# Error: Could not generate code.")
+                "code": result.get("final_code", "# Error: Could not generate code."),
+                "cost_metrics": result.get("cost_metrics", {}),
+                "context_analytics": result.get("context_analytics", {})
             }) + "\n"
-            
-            # NO RETURN HERE - just end the generator
             
         except Exception as e:
             print(f"❌ Server Error: {str(e)}")
