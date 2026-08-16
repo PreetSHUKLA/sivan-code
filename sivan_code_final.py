@@ -8,8 +8,6 @@ Original file is located at
 """
 
 # @title
-
-
 import requests
 import json
 import time
@@ -59,6 +57,10 @@ class APIConfig:
             self.COST_PER_1K_TOKENS = {
                 "lightning-ai/kimi-k2.5": 0.0001,
                 "anthropic/claude-sonnet-4-5-20250929": 0.00014,
+                # ADDED NEW MODELS HERE (using estimated pricing)
+                "lightning-ai/gpt-oss-120b": 0.0007,
+                "lightning-ai/nvidia-nemotron-3-nano-omni-30b-a3b": 0.0002,
+                "openai/gpt-5.6-luna": 0.0050
             }
 
     @classmethod
@@ -246,23 +248,120 @@ class PlannerAgent:
 
     def create_plan(self, task_description: str, codebase_context: str = "", redesign_feedback: Optional[str] = None) -> Dict:
         """Creates ONLY architectural plan - NO CODE GENERATION"""
-
         if redesign_feedback:
-            prompt = f"""You are a SENIOR SOFTWARE ARCHITECT. Your role is PLANNING ONLY - NOT coding.\n\nThe previous implementation approach FAILED with these issues:\n{redesign_feedback}\n\nORIGINAL TASK: {task_description}\n\nYOUR JOB: Design a COMPLETELY DIFFERENT architectural approach.\n\n⚠️ IMPORTANT: You are NOT writing code. You are making architectural decisions.\n\nYOUR JOB: Design a COMPLETELY DIFFERENT architectural approach that follows the principle of PROPORTIONAL ENGINEERING.
+            prompt = f"""You are a SENIOR SOFTWARE ARCHITECT. Your role is PLANNING ONLY - NOT coding.
+
+The previous implementation approach FAILED with these issues:
+{redesign_feedback}
+
+ORIGINAL TASK: {task_description}
+
+YOUR JOB: Design a COMPLETELY DIFFERENT architectural approach.
+
+⚠️ IMPORTANT: You are NOT writing code. You are making architectural decisions.
+
+YOUR JOB: Design a COMPLETELY DIFFERENT architectural approach that follows the principle of PROPORTIONAL ENGINEERING.
 - For trivial tasks: Prioritize clean, idiomatic, and robust single-file execution.
-- For production tasks: Prioritize modularity, observability, and scalability.\nRESPOND WITH THIS EXACT STRUCTURE (NO CODE):\n\n## Root Cause Analysis\n[THINKING SPACE: Why did the previous approach fail? What was the fundamental mistake? Analyze the trade-offs before proposing a new solution.]\n\n## New Architectural Strategy\n[High-level design paradigm - describe the approach, don't implement it]\n\n## Technology Stack\n[Specific libraries/frameworks to use]\n- Library 1: [name] - Purpose: [why use it]\n- Library 2: [name] - Purpose: [why use it]\n\n## Component Breakdown\n[List of classes/functions needed - just names and responsibilities, NO implementation]\n1. Component Name: Responsibility\n2. Component Name: Responsibility\n\n## Implementation Roadmap\n[Step-by-step tasks for the Worker agent to execute]\nStep 1: [What to build]\nStep 2: [What to build]\nStep 3: [What to build]\n\n## Security Requirements\n[What security measures must be implemented]\n\n## Edge Cases to Handle\n[List specific edge cases]\n\n## Success Criteria\n[How to verify the implementation works]\n\n⚠️ DO NOT WRITE ANY CODE. Your output is architectural guidance for the Worker agent."""
+- For production tasks: Prioritize modularity, observability, and scalability.
+RESPOND WITH THIS EXACT STRUCTURE (NO CODE):
+
+## Root Cause Analysis
+[THINKING SPACE: Why did the previous approach fail? What was the fundamental mistake? Analyze the trade-offs before proposing a new solution.]
+
+## New Architectural Strategy
+[High-level design paradigm - describe the approach, don't implement it]
+
+## Technology Stack
+[Specific libraries/frameworks to use]
+- Library 1: [name] - Purpose: [why use it]
+- Library 2: [name] - Purpose: [why use it]
+
+## Component Breakdown
+[List of classes/functions needed - just names and responsibilities, NO implementation]
+1. Component Name: Responsibility
+2. Component Name: Responsibility
+
+## Implementation Roadmap
+[Step-by-step tasks for the Worker agent to execute]
+Step 1: [What to build]
+Step 2: [What to build]
+Step 3: [What to build]
+
+## Security Requirements
+[What security measures must be implemented]
+
+## Edge Cases to Handle
+[List specific edge cases]
+
+## Success Criteria
+[How to verify the implementation works]
+
+⚠️ DO NOT WRITE ANY CODE. Your output is architectural guidance for the Worker agent."""
 
         else:
-            prompt = f"""You are an EXPERT SOFTWARE ARCHITECT. Your role is PLANNING & ARCHITECTURE ONLY - NOT coding.\n\nTASK TO ARCHITECT: {task_description}\n\nEXISTING CODEBASE CONTEXT: {codebase_context if codebase_context else "New project - starting from scratch"}\n\nYOUR JOB: Create a comprehensive architectural plan that the Worker agent will implement.\n\n⚠️ CRITICAL: You are NOT writing code. You are designing the architecture and breaking down the work.\nYOUR JOB: Design a COMPLETELY DIFFERENT architectural approach that follows the principle of PROPORTIONAL ENGINEERING.
+            prompt = f"""You are an EXPERT SOFTWARE ARCHITECT. Your role is PLANNING & ARCHITECTURE ONLY - NOT coding.
+
+TASK TO ARCHITECT: {task_description}
+
+EXISTING CODEBASE CONTEXT: {codebase_context if codebase_context else "New project - starting from scratch"}
+
+YOUR JOB: Create a comprehensive architectural plan that the Worker agent will implement.
+
+⚠️ CRITICAL: You are NOT writing code. You are designing the architecture and breaking down the work.
+YOUR JOB: Design a COMPLETELY DIFFERENT architectural approach that follows the principle of PROPORTIONAL ENGINEERING.
 - For trivial tasks: Prioritize clean, idiomatic, and robust single-file execution.
-- For production tasks: Prioritize modularity, observability, and scalability.\n\nRESPOND WITH THIS EXACT STRUCTURE (NO CODE BLOCKS):\n\n## Technical Analysis\n[THINKING SPACE: Analyze the core problem. What are the major technical hurdles? Discuss trade-offs between different approaches (e.g., sync vs async, database choices). Make your architectural decisions here before writing the blueprint below.]\n\n## Architecture Overview\n[High-level design approach - describe the chosen solution architecture based on your analysis]\n\n## Technology Stack & Libraries\n[Specific libraries to use - be precise! Base this on your analysis.]\n- Library 1: [exact name] - Purpose: [what it does]\n- Library 2: [exact name] - Purpose: [what it does]\nExample: "email-validator" for email validation (safer than regex)\n\n## Component Design\n[Classes/functions needed - just structure, NO implementation]\n1. ClassName/FunctionName\n   - Purpose: [what it does]\n   - Inputs: [what parameters]\n   - Outputs: [what it returns]\n   - Dependencies: [what it needs]\n
-2. ClassName/FunctionName\n   - Purpose: [what it does]\n   - Inputs: [what parameters]\n   - Outputs: [what it returns]\n
-## Implementation Tasks (for Worker Agent)\n[Detailed step-by-step breakdown - actionable tasks]\nTask 1: [Specific instruction for Worker]\nTask 2: [Specific instruction for Worker]\nTask 3: [Specific instruction for Worker]\n
-## Security Considerations\n[Security requirements the Worker must implement]\n- Requirement 1: [what must be secured and how]\n
-## Edge Cases & Error Handling\n[Specific scenarios to handle]\n- Edge case 1: [scenario] → [how to handle]\n
-## Testing Strategy\n[What should be tested]\n
-## Success Criteria\n[How to verify correctness]\n
-⚠️ REMEMBER: You are the architect, not the builder. Provide the blueprint, not the construction.\n⚠️ DO NOT INCLUDE ANY CODE SNIPPETS OR IMPLEMENTATIONS.\n⚠️ Focus on WHAT to build and WHY, not HOW to build it."""
+- For production tasks: Prioritize modularity, observability, and scalability.
+
+RESPOND WITH THIS EXACT STRUCTURE (NO CODE BLOCKS):
+
+## Technical Analysis
+[THINKING SPACE: Analyze the core problem. What are the major technical hurdles? Discuss trade-offs between different approaches (e.g., sync vs async, database choices). Make your architectural decisions here before writing the blueprint below.]
+
+## Architecture Overview
+[High-level design approach - describe the chosen solution architecture based on your analysis]
+
+## Technology Stack & Libraries
+[Specific libraries to use - be precise! Base this on your analysis.]
+- Library 1: [exact name] - Purpose: [what it does]
+- Library 2: [exact name] - Purpose: [what it does]
+Example: "email-validator" for email validation (safer than regex)
+
+## Component Design
+[Classes/functions needed - just structure, NO implementation]
+1. ClassName/FunctionName
+   - Purpose: [what it does]
+   - Inputs: [what parameters]
+   - Outputs: [what it returns]
+   - Dependencies: [what it needs]
+
+2. ClassName/FunctionName
+   - Purpose: [what it does]
+   - Inputs: [what parameters]
+   - Outputs: [what it returns]
+
+## Implementation Tasks (for Worker Agent)
+[Detailed step-by-step breakdown - actionable tasks]
+Task 1: [Specific instruction for Worker]
+Task 2: [Specific instruction for Worker]
+Task 3: [Specific instruction for Worker]
+
+## Security Considerations
+[Security requirements the Worker must implement]
+- Requirement 1: [what must be secured and how]
+
+## Edge Cases & Error Handling
+[Specific scenarios to handle]
+- Edge case 1: [scenario] → [how to handle]
+
+## Testing Strategy
+[What should be tested]
+
+## Success Criteria
+[How to verify correctness]
+
+⚠️ REMEMBER: You are the architect, not the builder. Provide the blueprint, not the construction.
+⚠️ DO NOT INCLUDE ANY CODE SNIPPETS OR IMPLEMENTATIONS.
+⚠️ Focus on WHAT to build and WHY, not HOW to build it."""
 
         plan, cost, tokens = call_ai_api_with_metrics(
             self.config.PLANNER_MODEL, self.config.PLANNER_API_KEY,
@@ -286,11 +385,31 @@ class WorkerAgent:
 
     def write_code(self, plan_data: Dict, feedback: Optional[str] = None, iteration: int = 1, priority_fixes: Optional[str] = None) -> Tuple[str, float]:
         if feedback and priority_fixes:
-            prompt = f"""CRITICAL fixes required.\n\nTASK: {plan_data['task']}\nPLAN: {plan_data['plan']}\nCRITICAL: {priority_fixes}\nFEEDBACK: {feedback}\n\nINSTRUCTIONS:\n- Implement the requested fixes.\n- Use type hints and add brief, highly technical docstrings.\n- Output ONLY valid code. No conversational filler."""
+            prompt = f"""CRITICAL fixes required.
+
+TASK: {plan_data['task']}
+PLAN: {plan_data['plan']}
+CRITICAL: {priority_fixes}
+FEEDBACK: {feedback}
+
+INSTRUCTIONS:
+- Implement the requested fixes.
+- Use type hints and add brief, highly technical docstrings.
+- Output ONLY valid code. No conversational filler."""
         elif feedback:
-            prompt = f"""Revise code.\n\nTASK: {plan_data['task']}\nFEEDBACK: {feedback}\n\nOutput ONLY corrected code."""
+            prompt = f"""Revise code.
+
+TASK: {plan_data['task']}
+FEEDBACK: {feedback}
+
+Output ONLY corrected code."""
         else:
-            prompt = f"""Implement.\n\nTASK: {plan_data['task']}\nPLAN: {plan_data['plan']}\n\nUse libraries. Production code. Use type hints and add brief, highly technical docstrings"""
+            prompt = f"""Implement.
+
+TASK: {plan_data['task']}
+PLAN: {plan_data['plan']}
+
+Use libraries. Production code. Use type hints and add brief, highly technical docstrings"""
 
         code, cost, tokens = call_ai_api_with_metrics(
             self.config.WORKER_MODEL, self.config.WORKER_API_KEY,
@@ -575,7 +694,6 @@ class ContextLimits:
     max_feedback_length: int = 8000
     keep_iterations: int = 1
 
-
 # ============================================================================
 # CONTEXT MANAGER
 # ============================================================================
@@ -662,7 +780,27 @@ class ContextManager:
 
         # ITERATION 1: Fresh start
         if iteration == 1:
-            prompt = f"""You are an expert Python developer. Implement this coding task.\n\nTASK:\n{task}\n\nIMPLEMENTATION PLAN:\n{self.truncate_text(plan, 2000)}\n\nMANDATORY REQUIREMENTS:\n- Follow the plan architecture EXACTLY\n- Use recommended libraries from the plan\n- Include comprehensive error handling\n- Add type hints and detailed docstrings\n- Handle all edge cases mentioned\n- Write production-ready, secure code\n- NO quick hacks or unsafe patterns\n\nIf using external libraries, add installation comments.\n\nOutput ONLY the Python code wrapped in ```python code blocks.\n"""
+            prompt = f"""You are an expert Python developer. Implement this coding task.
+
+TASK:
+{task}
+
+IMPLEMENTATION PLAN:
+{self.truncate_text(plan, 2000)}
+
+MANDATORY REQUIREMENTS:
+- Follow the plan architecture EXACTLY
+- Use recommended libraries from the plan
+- Include comprehensive error handling
+- Add type hints and detailed docstrings
+- Handle all edge cases mentioned
+- Write production-ready, secure code
+- NO quick hacks or unsafe patterns
+
+If using external libraries, add installation comments.
+
+Output ONLY the Python code wrapped in ```python code blocks.
+"""
             metadata['tokens_estimate'] = self.estimate_tokens(prompt)
             return prompt, metadata
 
@@ -687,9 +825,32 @@ class ContextManager:
 
         focused_feedback = self.truncate_text(focused_feedback, self.limits.max_feedback_length)
 
-        prompt = f"""You are an expert Python developer. REVISE the code based on reviewer feedback.\n\nORIGINAL TASK:\n{task}\n\nPREVIOUS CODE (Iteration {iteration - 1}):\n```python\n{code_to_include}\nISSUES DETECTED:\n{focused_feedback}\n\nINSTRUCTIONS:\n\nFix ALL issues mentioned in the feedback\n\nPrioritize security and correctness over cleverness\n\nUse established libraries where recommended\n\nInclude comments explaining fixes\n\nProvide ONLY the complete, corrected Python code\n\nOutput clean, working Python code wrapped in ```python code blocks.\n"""
-        metadata['tokens_estimate'] = self.estimate_tokens(prompt)
+        prompt = f"""You are an expert Python developer. REVISE the code based on reviewer feedback.
 
+ORIGINAL TASK:
+{task}
+
+PREVIOUS CODE (Iteration {iteration - 1}):
+```python
+{code_to_include}
+ISSUES DETECTED:
+{focused_feedback}
+
+INSTRUCTIONS:
+
+Fix ALL issues mentioned in the feedback
+
+Prioritize security and correctness over cleverness
+
+Use established libraries where recommended
+
+Include comments explaining fixes
+
+Provide ONLY the complete, corrected Python code
+
+Output clean, working Python code wrapped in ```python code blocks.
+"""
+        metadata['tokens_estimate'] = self.estimate_tokens(prompt)
         return prompt, metadata
 
     def log_iteration(self, iteration: int, prompt_tokens: int, code_length: int):
@@ -778,7 +939,8 @@ class EnhancedWorkerAgent:
         print(f"💰 Cost: ${cost:.6f} | Tokens: {tokens}")
         print()
 
-        return code
+        # FIX 2: Return all three values, not just code
+        return code, cost, tokens
 
     def get_context_summary(self):
         """Get context usage summary"""
@@ -871,6 +1033,9 @@ class EnhancedCodingAgentOrchestrator:
                 print("📋 PHASE 1: INITIAL PLANNING")
                 print("-" * 80)
                 plan_data = self.planner.create_plan(task_description, codebase_context)
+
+                # ADDED: Track planner cost
+                self.cost_metrics.add_cost("planner", 0, plan_data.get("cost", 0.0))
             else:
                 print(f"🔄 ARCHITECTURAL REDESIGN #{redesign_count}")
                 print("-" * 80)
@@ -895,13 +1060,15 @@ class EnhancedCodingAgentOrchestrator:
                     priority_fixes = review_result['critical_issues']
 
                 # Generate code with context management
-                raw_code = self.worker.write_code(
+                # CHANGED: Unpack the tuple and add to metrics
+                raw_code, worker_cost, worker_tokens = self.worker.write_code(
                     plan_data=plan_data,
                     feedback=review_result.get('feedback') if review_result else None,
                     iteration=iteration,
                     previous_code=code,
                     priority_fixes=priority_fixes
                 )
+                self.cost_metrics.add_cost("worker", worker_tokens, worker_cost)
 
                 # --- NEW: FAST-FEEDBACK SYNTAX CHECK ---
                 is_valid, code, syntax_error = self._extract_and_validate_code(raw_code)
@@ -932,6 +1099,9 @@ class EnhancedCodingAgentOrchestrator:
                     iteration=iteration
                 )
 
+                # ADDED: Track reviewer cost
+                self.cost_metrics.add_cost("reviewer", 0, review_result.get("cost", 0.0))
+
                 # Check if approved
                 if review_result.get('approved'):
                     print("\n" + "=" * 80)
@@ -952,7 +1122,8 @@ class EnhancedCodingAgentOrchestrator:
                         'plan': plan_data.get('plan', ''),
                         'approved': True,
                         'status': 'SUCCESS',
-                        'cost_metrics': {'total_cost': 0.0}, # Calculated elsewhere
+                        # CHANGED FROM: 'cost_metrics': {'total_cost': 0.0}
+                        'cost_metrics': asdict(self.cost_metrics),
                         'context_analytics': self.worker.get_context_summary()
                     }
 
@@ -969,6 +1140,9 @@ class EnhancedCodingAgentOrchestrator:
                         codebase_context,
                         redesign_feedback=redesign_feedback
                     )
+
+                    # ADDED: Track planner cost for redesign
+                    self.cost_metrics.add_cost("planner", 0, plan_data.get("cost", 0.0))
 
                     redesign_count += 1
                     break
@@ -998,7 +1172,8 @@ class EnhancedCodingAgentOrchestrator:
             'plan': plan_data.get('plan', '') if plan_data else '',
             'approved': False,
             'status': 'FAILED - Exhausted Redesigns',
-            'cost_metrics': {'total_cost': 0.0},
+            # CHANGED FROM: 'cost_metrics': {'total_cost': 0.0}
+            'cost_metrics': asdict(self.cost_metrics),
             'context_analytics': self.worker.get_context_summary()
         }
 print("✅ ENHANCED CONTEXT MANAGEMENT SYSTEM LOADED!")
@@ -1134,5 +1309,3 @@ async def get_last_plan(auth_code: str):
             "plan": "No recent plan found. Run a generation first!",
             "review": "No recent review found."
         }
-
-        
