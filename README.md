@@ -1,5 +1,3 @@
-## This is just a test
-
 
 Sivan AI: The Multi-Agent Orchestration CLI
 
